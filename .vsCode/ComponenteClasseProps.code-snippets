@@ -1,0 +1,26 @@
+{
+	"Componente Classe Props": {
+		"scope": "typescriptreact",
+		"prefix": "ccp",
+		"body": [
+			"import React, { Component } from 'react'",
+			"import { Text } from 'react-native'",
+            "import styles from './styles.tsx'",
+			"",
+			"type Props = {",
+            "",
+            "}",
+			"",
+			"export default class ${TM_FILENAME_BASE} extends Component<Props>{",
+            "    render (){",
+			"       return (",
+			"           <Text>",
+			"               $1",
+			"           </Text>",
+			"       )",
+            "    }",
+			"}",
+		],
+		"description": "Log output to console"
+	}
+}

@@ -1,0 +1,16 @@
+{
+	"Styles": {
+		"scope": "typescriptreact",
+		"prefix": "strn",
+		"body": [
+			"import {StyleSheet} from 'react-native'",
+			"",
+			"const styles = StyleSheet.create({",
+			"",
+			"})",
+            "",
+            "export default styles"
+		],
+		"description": "Log output to console"
+	}
+}

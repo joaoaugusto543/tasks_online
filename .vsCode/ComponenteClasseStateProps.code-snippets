@@ -1,0 +1,30 @@
+{
+	"Componente Classe State Props": {
+		"scope": "typescriptreact",
+		"prefix": "ccps",
+		"body": [
+			"import React, { Component } from 'react'",
+			"import { Text } from 'react-native'",
+            "import styles from './styles.tsx'",
+			"",
+			"type Props = {",
+            "",
+            "}",
+			"",
+			"type MyState = {",
+            "",
+            "}",
+			"",
+			"export default class ${TM_FILENAME_BASE} extends Component<Props,MyState>{",
+            "    render (){",
+			"       return (",
+			"           <Text>",
+			"               $1",
+			"           </Text>",
+			"       )",
+            "    }",
+			"}",
+		],
+		"description": "Log output to console"
+	}
+}
