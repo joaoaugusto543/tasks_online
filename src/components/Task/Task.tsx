@@ -140,7 +140,7 @@ export default class Task extends Component<Props,MyState>{
             <Swipeable 
                 renderRightActions={this.getRightContent} 
                 renderLeftActions={this.getLeftContent}
-                onSwipeableOpen={() => onDelete(id)}
+                onSwipeableLeftOpen={() => onDelete(id)}
             >
                 {true && <ModelTask isVisible={isVisible} onCancel={this.cancelEditTask} onEdit={this.editTask} task={task}/>}
                 <View style={styles.container}>
