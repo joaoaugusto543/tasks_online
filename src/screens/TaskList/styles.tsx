@@ -42,10 +42,12 @@ const styles = StyleSheet.create({
         width:50,
         height:50,
         borderRadius:50,
-        backgroundColor:commonStyles.colors.today,
         justifyContent:'center',
         alignItems:'center'
     },
+    filter:{
+        marginBottom:10
+    }
     
 })
 

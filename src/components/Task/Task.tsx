@@ -11,7 +11,6 @@ import ModelTask from '../../../src/screens/ModalTask/ModalTask.tsx'
 import tasksInterface from 'src/interfaces/tasksInterface.ts'
 import addOneDay from '../../../src/services/addOneDay.ts'
 
-
 type Props = {
     id:string
     desc:string,
@@ -142,7 +141,7 @@ export default class Task extends Component<Props,MyState>{
                 renderLeftActions={this.getLeftContent}
                 onSwipeableLeftOpen={() => onDelete(id)}
             >
-                {true && <ModelTask isVisible={isVisible} onCancel={this.cancelEditTask} onEdit={this.editTask} task={task}/>}
+                <ModelTask isVisible={isVisible} onCancel={this.cancelEditTask} onEdit={this.editTask} task={task}/>
                 <View style={styles.container}>
                     <TouchableWithoutFeedback onPress={() => onToggleTask(id)}>
                         <View style={styles.checkContainer}>

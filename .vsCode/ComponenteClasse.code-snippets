@@ -8,7 +8,7 @@
             "import styles from './styles.tsx'",
 			"",
 			"export default class ${TM_FILENAME_BASE} extends Component{",
-            "    render (){",
+            "    render (): React.ReactNode {",
 			"       return (",
 			"           <Text>",
 			"               $1",

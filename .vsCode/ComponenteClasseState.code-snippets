@@ -12,7 +12,7 @@
             "}",
 			"",
 			"export default class ${TM_FILENAME_BASE} extends Component<any,MyState>{",
-            "    render (){",
+            "    render (): React.ReactNode {",
 			"       return (",
 			"           <Text>",
 			"               $1",

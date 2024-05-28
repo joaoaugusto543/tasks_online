@@ -19,7 +19,7 @@ import DateTimePicker from '@react-native-community/datetimepicker'
 import styles from './styles.tsx'
 import addTaskInterface from 'src/interfaces/addTaskInterface.ts'
 import tasksInterface from 'src/interfaces/tasksInterface.ts'
-import addOneDay from '../../../src/services/addOneDay.ts'
+import Loader from '../Loader/Loader.tsx'
 
 type Props = {
     onCancel: () => void,
@@ -41,8 +41,16 @@ export default class ModelTask extends Component<Props,MyState>{
 
     state: MyState = {
          ...initialState,
-        desc: this.props.task ? this.props.task.desc : '',
-        date: this.props.task ? this.props.task.estimateAt : new Date()
+    }
+
+    componentDidMount(): void {
+
+        const task = this.props.task
+        
+        if(task){
+            this.setState({desc:task.desc,date:new Date(task.estimateAt)})
+        }
+
     }
 
     showDatePicker = () => {
@@ -74,7 +82,7 @@ export default class ModelTask extends Component<Props,MyState>{
         }
 
         this.props.onCancel()
-        this.setState({desc:task.desc,date:task.estimateAt})
+        this.setState({desc:task.desc,date:new Date(task.estimateAt)})
     }
 
     saveEditTask = () => {
@@ -95,9 +103,10 @@ export default class ModelTask extends Component<Props,MyState>{
 
         if(this.props.onEdit){
             this.props.onEdit(taskUpdated)
+            return
         }
 
-        this.setState({desc:task.desc,date:task.estimateAt})
+        this.setState({desc:task.desc,date:new Date(task.estimateAt)})
 
     }
 
@@ -141,14 +150,15 @@ export default class ModelTask extends Component<Props,MyState>{
         const {desc} = this.state
 
        return (
-           <Modal 
+    
+            <Modal 
                 transparent={true} 
                 visible={isVisible}
                 onRequestClose={onCancel}
                 animationType='fade'
             >
                 <TouchableWithoutFeedback
-                    onPress={onCancel}>
+                    onPress={task ? this.closeTaskEdiAndReset: onCancel}>
                     <View style={styles.overlay}/>
                 </TouchableWithoutFeedback>
                 <View style={styles.container}>
@@ -161,7 +171,7 @@ export default class ModelTask extends Component<Props,MyState>{
                     />
                     {this.getDatePicker()}
                     <View style={styles.buttons}>
-                        <TouchableOpacity onPress={this.closeTaskEdiAndReset}>
+                        <TouchableOpacity onPress={task ? this.closeTaskEdiAndReset: onCancel}>
                             <Text style={styles.button}>Cancelar</Text>
                         </TouchableOpacity>
                         <TouchableOpacity onPress={!task ? this.saveAddTask : this.saveEditTask}>
@@ -170,10 +180,10 @@ export default class ModelTask extends Component<Props,MyState>{
                     </View>
                 </View>
                 <TouchableWithoutFeedback
-                    onPress={onCancel}>
+                    onPress={task ? this.closeTaskEdiAndReset: onCancel}>
                     <View style={styles.overlay}/>
                 </TouchableWithoutFeedback>
-           </Modal>
+            </Modal>
        )
     }
 }

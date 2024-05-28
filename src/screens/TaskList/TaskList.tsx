@@ -1,7 +1,6 @@
-import React, { Component } from 'react'
-import { Text,View,ImageBackground, FlatList , TouchableOpacity, Alert} from 'react-native'
+import React, { Component, useEffect } from 'react'
+import { Text,View,ImageBackground, FlatList , TouchableOpacity, Alert, ImageSourcePropType} from 'react-native'
 import styles from './styles.tsx'
-import todayImage from '../../../assets/imgs/today.jpg'
 import moment from 'moment'
 import 'moment/locale/pt-br'
 import Task from '../../components/Task/Task.tsx'
@@ -13,45 +12,83 @@ import ModelTask from '../ModalTask/ModalTask.tsx'
 import addTaskInterface from 'src/interfaces/addTaskInterface.ts'
 import addOneDay from '../../../src/services/addOneDay.ts'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
+import AsyncStorage from  '@react-native-async-storage/async-storage'
+import { checkTask, createTask, deleteTaskService, editTask, getTasks } from '../../../src/services/taskServices.ts'
+import { showError } from '../../../src/services/commomFunctions.ts'
+import Loader from '../Loader/Loader.tsx'
+import api from '../../../src/api/api.ts'
 
 
 type MyState = {
     showDoneTasks:boolean
     visibleTasks: tasksInterface[]
     tasks: tasksInterface[],
-    showAddTask:boolean
+    showAddTask:boolean,
+    loader:boolean
 }
 
-export default class TaskList extends Component<any,MyState>{
+type Props = {
+    navigation:any,
+    title:string,
+    daysAhead:number,
+    color:string,
+    image:ImageSourcePropType
+}
+
+
+const initialState = {
+    showDoneTasks:true,
+    visibleTasks:[],
+    showAddTask:false,
+    tasks:[],
+    loader:true
+}
+
+export default class TaskList extends Component<Props,MyState>{
 
     
     state : MyState = {
-        showDoneTasks:true,
-        visibleTasks:[],
-        showAddTask:false,
-        tasks:[
-            {
-                id:String(Math.random()),
-                desc:'Comprar banana',
-                estimateAt:new Date(2024,3,25)
-            },
-            {
-                id:String(Math.random()),
-                desc:'Comprar batata',
-                estimateAt:new Date(2024,4,24)
-            },
-            {
-                id:String(Math.random()),
-                desc:'Comprar limão',
-                estimateAt:new Date(2024,6,27),
-                doneAt: new Date(2024,6,24)
-            }
-        ]
-        
+        ...initialState
     }
 
-    componentDidMount(): void {
-        this.filterTasks()
+    componentDidMount = async () => {
+        const stateString = await AsyncStorage.getItem('tasksState') as string
+
+        const token = await AsyncStorage.getItem('token')
+
+        const savedState:MyState = JSON.parse(stateString) || initialState
+
+        api.defaults.headers.common['Authorization'] = `bearer ${token}`
+
+        this.props.navigation.addListener('focus', () => {
+            this.loadData()
+        })
+
+
+        this.setState({
+
+            showDoneTasks:savedState.showDoneTasks
+
+        },this.filterTasks)
+
+        this.loadData()
+    }
+
+    loadData = async () => {
+
+        this.setState({loader:true})
+
+        const currentDate = moment().add({days:this.props.daysAhead}).format('YYYY-MM-DD')
+
+        const res = await getTasks(currentDate)
+
+        if(res.error){
+            showError('Erro interno')
+            return
+        }
+
+        this.setState({tasks:res,loader:false},this.filterTasks)
+
     }
 
     toggleFilter = () => {
@@ -83,9 +120,11 @@ export default class TaskList extends Component<any,MyState>{
 
         this.setState({visibleTasks})
 
+        AsyncStorage.setItem('tasksState', JSON.stringify({showDoneTasks:this.state.showDoneTasks}))
+
     }
 
-    toggleTask = (id:string) => {
+    toggleTask = async (id:string) => {
 
         const task = this.state.tasks.find(task => task.id === id)
 
@@ -111,6 +150,12 @@ export default class TaskList extends Component<any,MyState>{
             
         })
 
+        if(task.doneAt){
+            await checkTask(task.id,task.doneAt)
+        }else{
+            await checkTask(task.id)
+        }
+
         this.setState({tasks},this.filterTasks)
 
     }
@@ -127,8 +172,8 @@ export default class TaskList extends Component<any,MyState>{
         
         const instructionsArray = [
             'Adicionar tarefas: aperte no botão "+" e escreva a descrição da tarefa, clique na data e adicione a data para a tarefa ser concluída.',
-            'Editar tarefa: arraste a tarefa para a esquerda "<-" e aperte no lápis e modifique a tarefa.',
-            'Excluir tarefa: arraste a tarefa para a direita "<-" para excluir a tarefa(arraste pelo menos até a metade).'
+            'Editar tarefa: arraste a tarefa para a esquerda "<----" e aperte no lápis e modifique a tarefa.',
+            'Excluir tarefa: arraste a tarefa para a direita "---->" para excluir a tarefa(arraste pelo menos até a metade).'
         ]
 
         const instructions = `${instructionsArray[0]}\n\n${instructionsArray[1]}\n\n${instructionsArray[2]}`
@@ -136,7 +181,9 @@ export default class TaskList extends Component<any,MyState>{
         Alert.alert('Instruções', instructions.trim())
     }
 
-    addTask = (newTask:addTaskInterface) => {
+    addTask = async (newTask:addTaskInterface) => {
+
+        this.setState({loader:true})
 
         if(!newTask.desc || !newTask.desc.trim()){
             Alert.alert('Descrição inválidos','Descrição não informada!')
@@ -153,86 +200,114 @@ export default class TaskList extends Component<any,MyState>{
             return
         }
 
-        const tasks:tasksInterface[] = [...this.state.tasks]
+        const res = await createTask(newTask.desc,newTask.estimateAt)
 
-        const upcomingTask = {
-            ...newTask,
-            id:String(Math.random()),
-            doneAt:undefined
+        if(res.error){
+            showError('Erro interno')
+            return
         }
 
-        tasks.push(upcomingTask)
-
-        this.setState({tasks,showAddTask:false},this.filterTasks)
+        this.setState({showAddTask:false},this.loadData)
     }
 
-    editTaskList = (taskUpdated:tasksInterface) => {
+    editTaskList = async (taskUpdated:tasksInterface) => {
+
+        this.setState({loader:true})
 
         const tasks:tasksInterface[] = [...this.state.tasks]
 
         const taksUpdated = tasks.map((task)=>{
             if(task.id === taskUpdated.id){
+
                 return taskUpdated
             }
 
             return task
         })
 
-        this.setState({tasks:taksUpdated,showAddTask:false},this.filterTasks)
+        const {id,desc,estimateAt} = taskUpdated
+
+        await editTask(id,desc,estimateAt)
+
+        this.setState({tasks:taksUpdated},this.loadData)
     }
 
-    deleteTask = (id:string) => {
+    deleteTask = async (id:string) => {
+
+        this.setState({loader:true})
 
         const tasks = [...this.state.tasks]
 
         const tasksFiltered = tasks.filter((task)=> task.id !== id)
 
-        this.setState({tasks:tasksFiltered},this.filterTasks)
+        await deleteTaskService(id)
+
+        this.setState({tasks:tasksFiltered},this.loadData)
 
     }
-
+    
     render(): React.ReactNode {
         
         const today = moment().locale('pt-br').format('ddd, D [de] MMMM')
         
-        const {showDoneTasks,visibleTasks,showAddTask} = this.state
+        const {showDoneTasks,visibleTasks,showAddTask,loader} = this.state
+
+        const {title,navigation,image,color} = this.props
+
+        if(loader){
+            return <Loader/>
+        }
 
         return (
+
             <GestureHandlerRootView>
-
                 <View style={styles.container}>
-                    <ModelTask 
-                     onSave={this.addTask}
-                     isVisible={showAddTask} 
-                     onCancel={this.cancelAddTask} 
-                    />
-                    <ImageBackground source={todayImage} style={styles.background}>
+                    {!loader &&
+                        <ModelTask 
+                            onSave={this.addTask}
+                            isVisible={showAddTask} 
+                            onCancel={this.cancelAddTask} 
+                        />
+                    
+                    }
+                    <ImageBackground source={image} style={styles.background}>
                         <View style={styles.iconBar}>
-
-                            <TouchableOpacity 
-                                onPress={this.showInstructions}
-                                activeOpacity={0.7}
-                            >
-                                <Icon 
-                                    name='help-outline' 
-                                    size={20} 
-                                    type='Ionicons'
-                                    color={commonStyles.colors.secondary}
-                                />
-                            </TouchableOpacity>
-
-                            <TouchableOpacity onPress={this.toggleFilter}>
-                                <Icon 
-                                    name={showDoneTasks ? 'eye-outline' : 'eye-off-outline'} 
-                                    type='Ionicons'
-                                    size={20}
-                                    color={commonStyles.colors.secondary}
-                                /> 
-                            </TouchableOpacity>
+                                <TouchableOpacity 
+                                    onPress={() => navigation.toggleDrawer()}
+                                    activeOpacity={0.7}
+                                >
+                                    <Icon 
+                                        name='menu' 
+                                        size={25} 
+                                        type='Ionicons'
+                                        color={commonStyles.colors.secondary}
+                                    />
+                                </TouchableOpacity>
+                            <View>    
+                                <TouchableOpacity style={styles.filter} onPress={this.toggleFilter}>
+                                    <Icon 
+                                        name={showDoneTasks ? 'eye-outline' : 'eye-off-outline'} 
+                                        type='Ionicons'
+                                        size={20}
+                                        color={commonStyles.colors.secondary}
+                                    /> 
+                                </TouchableOpacity>
+                                <TouchableOpacity 
+                                    onPress={this.showInstructions}
+                                    activeOpacity={0.7}
+                                >
+                                    <Icon 
+                                        name='help-outline' 
+                                        size={20} 
+                                        type='Ionicons'
+                                        color={commonStyles.colors.secondary}
+                                    />
+                                </TouchableOpacity>
+                            </View>
 
                         </View>
                         <View style={styles.titleBar}>
-                            <Text style={styles.title}>Hoje</Text>
+                            <Text style={styles.title}>{title}</Text>
                             <Text style={styles.subtitle}>{today}</Text>
                         </View>
                     </ImageBackground>
@@ -250,7 +325,7 @@ export default class TaskList extends Component<any,MyState>{
                         />
                     </View>
                     <TouchableOpacity 
-                        style={styles.addButton}
+                        style={[styles.addButton,{backgroundColor:color}]}
                         onPress={this.showAddTask}
                         activeOpacity={0.7}
                     >
@@ -263,6 +338,7 @@ export default class TaskList extends Component<any,MyState>{
                     </TouchableOpacity>
                 </View>
             </GestureHandlerRootView>
+
        )
     }
 }
