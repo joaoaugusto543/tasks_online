@@ -32,8 +32,8 @@ type Props = {
 export default class Login extends Component<Props,MyState>{
 
     state : MyState = {
-        email:'lopes@gmail.com',
-        password:'12345678',
+        email:'',
+        password:'',
         loader:true
     }
 
@@ -54,6 +54,8 @@ export default class Login extends Component<Props,MyState>{
     async componentDidMount() {
 
         this.props.navigation.addListener('focus',async () => {
+
+            this.setState({password:'',email:''})
 
             this.verifyAuth()
         })
